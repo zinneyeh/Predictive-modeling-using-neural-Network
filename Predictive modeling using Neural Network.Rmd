@@ -1,0 +1,124 @@
+---
+title: "In-Class Lab Assignment 6(Neural Networks)"
+author: "Zin Min Thant"
+date: "`r Sys.Date()`"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+These exercises will re-enforce the concepts of a neural network by building the model on an actual data set. You need to develop the code as we work through the exercise together in class.
+
+This is the project that I worked on for part of my course work during two months of my semester. 
+
+## Data Description
+
+This lab assignment is going to use the car_seat_sales.csv file that is the data folder of this environment.
+
+A description of the variables are provided below:
+
+Store - a unique number that identifies each store (will not be used as a feature in the model).
+
+CompPrice - price charged by a local competitor
+
+Income - average annual income of the individuals who live within driving proximity to the store (in thousands of dollars)
+
+Advertising - the store’s advertising budget (in thousands of dollars)
+
+Population - the size of the local population who live within driving proximity to the store (in thousands)
+
+Price - the store’s price of the car seat
+
+ShelfLoc - the quality of the shelf location of the car seat in the store (Good, Medium, Bad)
+
+Age - average age of the local population who live within driving proximity to the store (in years)
+
+Education - average number of years of education for the local population who live within driving proximity to the store (in years)
+
+Urban - whether or not the store is in an urban location (Yes or No)
+
+US - whether the store is in the US or not (Yes or No)
+
+Sales - number of car seats sold (measured in 100s)
+
+## Import the Data
+Create a data frame name car_seat_sales from the .csv file that is in the data folder.
+
+```{r}
+car_seat_sale <- read.csv("/cloud/project/data/car_seat_sales.csv")
+
+```
+
+
+## Build a Neural Network Using 5-fold Cross Validation
+
+You want to build a random forest to predict car seat sales (Sales) using all the features except Store. Store is a unique identifier for each store and should not be considered a feature. Sales is the target variable.
+
+```{r}
+library(caret)
+
+
+# set random number seed for bootstrap samples
+# different seed values will generate different partitions of the data
+#using the same seed will generate the same model each time code is run
+set.seed(1975)
+
+
+#specify the cross validation method
+# method = k-fold cross-validation
+# number = number of folds
+
+cv_method <- trainControl(method="cv",number=5)
+
+# create a grid of parameter values to assess in k-fold cross-validation
+# for neural network, two parameters are: size and decay
+# size = number of neurons in the single hidden layer
+# decay = regularization parameter to avoid overfitting
+# Here we examine size = 5, 10, 15, 20 and decay = 0.1, 0.2, 0.3. 0.4, 0.5
+
+grid <-expand.grid(.size = seq(5,20,5), .decay = seq(0.1,0.5,0.1)) 
+#grid
+
+# train model via 10-fold cross-validation
+# first argument identifies target variable (before the ~) and the set of features variables (after the ~)
+# note we are excluding the Store index variable 
+# second argument (data) specifies the data frame
+# third argument (method) specifies prediction method (neural network)
+# fourth argument (trControl) specifies training process (cross-validation)
+# fifth argument (tuneGrid) specifies values of size and decay to evaluate
+# sixth argument (linout) specifies the output layer use a linear activation function 
+
+
+NeuralNet <- train(Sales ~. -Store, data = car_seat_sale, method="nnet",trControl=cv_method,tuneGrid=grid, lineout=TRUE)
+
+#identify the neural network parameters (size and decay) that minimize RMSE
+NeuralNet
+
+
+
+
+```
+
+The size and decay values specified in the grid code above are **_hyperparameters_** in a neural. A **_hyperparameter_** in machine learning is a value (a parameter) of the model that is not estimated with the data, but rather, you, the analyst have to set the value.
+
+Before the neural network is constructed you do not know the optimal number of neurons in the hidden layer so you construct a grid of values to be evaluated.
+
+The decay value is another **_hyperparameter_** that must be estimated from the data. The decay keeps the weights in the neural network from becoming too large. If the weights become too large the model will overfit the data. You can think of the decay value as a penalty. The decay value represents the percentage the numerical values of the weights are reduced. The optimal weight decay value depends on the data so models with different values of decay must be built and evaluated using RMSE. The values that are 'tried out' using the grid object are standard values to try in machine learning applications.
+
+
+## Let's Predict
+
+We have built a neural network. Let’s apply the model to the new data the model has never seen. That is, let’s predict some new observations.
+
+```{r}
+
+#import the new data
+new_car_seat_sales <- read.csv("/cloud/project/data/new_car_seat_sales_data.csv")
+
+
+#apply the neural network model to the new data
+NeuralNet_predict <-predict(NeuralNet, newdata =new_car_seat_sales)
+NeuralNet_predict
+
+
+```
